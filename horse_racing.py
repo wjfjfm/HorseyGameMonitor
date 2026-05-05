@@ -145,9 +145,8 @@ def calc_stats(horse_id):
             "t2_avg": "-", "t2_count": 0,
             "t3_avg": "-", "t3_count": 0,
             "t4_avg": "-", "t4_count": 0,
-            "wins": 0, "total": 0, "win_rate": "-",
-            "falls": 0, "avg_fall_time": "-", "fall_count": 0,
-            "avg_rank": "-", "rank_count": 0
+            "wins": 0, "total": 0,
+            "avg_fall_time": "-", "fall_count": 0
         }
 
     fell_recs = [r for r in race_recs if r.get("fall_time", "") != ""]
@@ -171,8 +170,6 @@ def calc_stats(horse_id):
     t4_count = len(t4_vals)
 
     wins = sum(1 for r in race_recs if r.get("rank", "") == "1")
-    win_rate = f"{wins/total*100:.1f}%"
-    falls = len(fell_recs)
 
     # 逐条确定最终时间，计算摔倒期望 = 总跑动时间 / 摔倒次数
     # 测试记录和正赛记录都纳入
@@ -210,8 +207,8 @@ def calc_stats(horse_id):
         "t2_avg": t2_avg, "t2_count": t2_count,
         "t3_avg": t3_avg, "t3_count": t3_count,
         "t4_avg": t4_avg, "t4_count": t4_count,
-        "wins": wins, "total": total, "win_rate": win_rate,
-        "falls": falls, "avg_fall_time": avg_fall, "fall_count": fall_count,
+        "wins": wins, "total": total,
+        "avg_fall_time": avg_fall, "fall_count": fall_count,
         "avg_rank": avg_rank, "rank_count": rank_count
     }
 
@@ -395,12 +392,10 @@ class TimerWindow:
             e.pack(side="left")
             self.entries["fall_time"] = e
 
-            rank_row = ttk.Frame(edit)
-            rank_row.pack(fill="x", pady=5, padx=10)
-            ttk.Label(rank_row, text="名次:").pack(side="left", padx=(0, 5))
-            self.rank_var = tk.IntVar(value=0)
-            for i in range(1, 6):
-                ttk.Radiobutton(rank_row, text=str(i), variable=self.rank_var, value=i).pack(side="left", padx=4)
+            win_row = ttk.Frame(edit)
+            win_row.pack(fill="x", pady=5, padx=10)
+            self.win_var = tk.BooleanVar(value=False)
+            ttk.Checkbutton(win_row, text="获胜", variable=self.win_var).pack(side="left", padx=(0, 5))
 
         act = ttk.Frame(self.win)
         act.pack(pady=10)
@@ -434,6 +429,7 @@ class TimerWindow:
         if ent:
             ent.delete(0, "end")
             ent.insert(0, f"{sec:.3f}")
+        self.win_var.set(True)
 
     def _record_line4(self):
         sec = self.timer.get_elapsed()
@@ -448,7 +444,7 @@ class TimerWindow:
         if ent_fall:
             ent_fall.delete(0, "end")
             ent_fall.insert(0, f"{sec:.3f}")
-        self.rank_var.set(2)
+        self.win_var.set(False)
 
     def _save(self):
         hs = self.horse_var.get()
@@ -473,7 +469,7 @@ class TimerWindow:
                 fall_v = vals.get("fall_time", "")
                 time3_v = vals.get("time3", "")
                 time4_v = vals.get("time4", "")
-                rank = str(self.rank_var.get()) if self.rank_var.get() > 0 else ""
+                rank = "1" if self.win_var.get() else "2"
                 add_record(hid, hname, "race",
                            vals.get("time1", ""), vals.get("time2", ""),
                            time3_v, time4_v, fall_v,
@@ -760,14 +756,14 @@ class MainApp:
 
         cols = (
             "hidden", "id", "name", "father", "mother", "test_avg", "t1", "t2", "t3", "t4",
-            "avg_fall_time", "avg_rank", "wins", "total", "win_rate", "falls"
+            "avg_fall_time", "wins", "total", "shared"
         )
         self.tree = ttk.Treeview(table_frame, columns=cols, show="headings")
         headings = {
             "id": "ID", "name": "名字", "father": "父亲", "mother": "母亲",
             "test_avg": "测试赛", "t1": "1线", "t2": "2线",
-            "t3": "3线", "t4": "4线", "avg_fall_time": "摔倒期望", "avg_rank": "平均名次",
-            "wins": "胜利数", "total": "参赛数", "win_rate": "胜率", "falls": "摔倒数",
+            "t3": "3线", "t4": "4线", "avg_fall_time": "摔倒期望",
+            "wins": "胜利数", "total": "参赛数", "shared": "共子",
             "hidden": "隐藏"
         }
         for col in cols:
@@ -783,11 +779,9 @@ class MainApp:
         self.tree.column("t3", width=80, anchor="center")
         self.tree.column("t4", width=80, anchor="center")
         self.tree.column("avg_fall_time", width=100, anchor="center")
-        self.tree.column("avg_rank", width=80, anchor="center")
         self.tree.column("wins", width=55, anchor="center")
         self.tree.column("total", width=55, anchor="center")
-        self.tree.column("win_rate", width=55, anchor="center")
-        self.tree.column("falls", width=55, anchor="center")
+        self.tree.column("shared", width=55, anchor="center")
         hsb = ttk.Scrollbar(table_frame, orient="horizontal", command=self.tree.xview)
         vsb = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(xscrollcommand=hsb.set, yscrollcommand=vsb.set)
@@ -883,9 +877,7 @@ class MainApp:
                 fmt(st["t3_avg"], st["t3_count"]),
                 fmt(st["t4_avg"], st["t4_count"]),
                 fmt(st["avg_fall_time"], st["fall_count"]),
-                fmt(st["avg_rank"], st["rank_count"]),
-                st["wins"], st["total"], st["win_rate"],
-                st["falls"]
+                st["wins"], st["total"], ""
             ))
 
         # 恢复选中（如果该马仍在表格中）
@@ -900,14 +892,25 @@ class MainApp:
     def _apply_bloodline(self):
         sel = self.tree.selection()
         if not sel:
+            horses = read_horses()
             for item in self.tree.get_children():
                 self.tree.item(item, tags=())
+                hid = item
+                count = sum(1 for h in horses if hid in {h.get("father_id",""), h.get("mother_id","")})
+                self.tree.set(item, "shared", f"({count})" if count else "")
             self._update_timer_buttons()
             return
         selected_id = sel[0]
         rels = _get_bloodline(selected_id, read_horses())
+        horses = read_horses()
         for item in self.tree.get_children():
             hid = item
+            # 对所有马计算与选中马的共同子女数
+            shared = sum(1 for h in horses
+                         if selected_id in {h.get("father_id",""), h.get("mother_id","")}
+                         and hid in {h.get("father_id",""), h.get("mother_id","")})
+            self.tree.set(item, "shared", f"({shared})" if shared else "")
+
             if hid == selected_id:
                 self.tree.item(item, tags=("self_sel",))
             elif hid in rels:
@@ -981,7 +984,8 @@ class MainApp:
                 self._clear_detail()
                 self._apply_bloodline()
                 self._update_timer_buttons()
-            return "break"
+
+        return "break"
 
     def _clear_detail(self):
         self.selected_horse_id = None
@@ -1003,6 +1007,7 @@ class MainApp:
                 tag = "fell"
             elif r.get("rank", "") == "1":
                 tag = "rank1"
+            rank_disp = "获胜" if r.get("rank", "") == "1" else ""
             self.tree_detail.insert("", "end", values=(
                 r["date"], mode_str,
                 r["time1"] if r["time1"] else "-",
@@ -1010,7 +1015,7 @@ class MainApp:
                 r["time3"] if r["time3"] else "-",
                 r["time4"] if r["time4"] else "-",
                 r.get("fall_time", "") if r.get("fall_time", "") else "-",
-                r.get("rank", "") if r.get("rank", "") else "-"
+                rank_disp
             ), tags=(tag,))
 
     def _delete_horse(self):
