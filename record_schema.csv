@@ -1,0 +1,8 @@
+﻿col_id,name,type,params,order,stats
+col_7,测试赛,time,,1,avg
+col_1,1线,time,,2,avg
+col_2,2线,time,,3,avg
+col_3,3线,time,,4,"avg,min"
+col_4,4线,time,,5,avg
+col_5,摔倒,time,,6,avg
+col_6,名次,bool,,7,avg

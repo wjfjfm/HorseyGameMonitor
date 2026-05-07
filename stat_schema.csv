@@ -1,0 +1,7 @@
+﻿stat_id,name,source_col,stat_type,order
+stat_1,1线平均,col_1,avg,1
+stat_2,2线平均,col_2,avg,2
+stat_3,3线平均,col_3,avg,3
+stat_4,4线平均,col_4,avg,4
+stat_5,摔倒平均,col_5,avg,5
+stat_6,获胜率,col_6,avg,6
